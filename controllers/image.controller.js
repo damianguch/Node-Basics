@@ -1,15 +1,19 @@
+const { error } = require('console');
 const { uploadImage } = require('../helper/cloudinary');
 Image = require('../models/image.model');
+const fs = require('fs');
 
 const uploadImageHandler = async (req, res) => {
   try {
-    // Handle for single file upload
-    if (req.file) {
-      console.log(req.file);
+    // Handle the case for single file upload
+    // req.file is populated by upload.single() not upload.array(). So Update
+    // the handler to consistently use req.files
+    if (req.files && req.files.length === 1) {
+      // Single file upload
+      const file = req.files[0];
 
-      // Pass the path property of the file object (from Multer) to
-      // uploadImage
-      const { url, publicId } = await uploadImage(req.file.path);
+      // Pass the path property of the file object to uploadImage
+      const { url, publicId } = await uploadImage(file.path);
 
       const newImage = new Image({
         url,
@@ -19,6 +23,9 @@ const uploadImageHandler = async (req, res) => {
 
       await newImage.save();
 
+      // Delete image from disk
+      fs.unlinkSync(req.file.path);
+
       return res.status(201).json({
         success: true,
         message: 'Image uploaded successfully',
@@ -26,8 +33,13 @@ const uploadImageHandler = async (req, res) => {
       });
     }
 
-    // Handle for multiple file uploads
-    if (req.files || Object.keys(req.files).length > 0) {
+    /**  Handle for multiple file uploads
+     req.files is populated by upload.array middleware
+     If used, even for a single file, the uploaded file will be available
+     in req.files, not req.file. So Update the handler to consistently use 
+     req.files
+    */
+    if (req.files && req.files.length > 1) {
       console.log(req.files);
       // Process and save multiple files
       const uploadedFiles = await Promise.all(
@@ -42,6 +54,7 @@ const uploadImageHandler = async (req, res) => {
           });
 
           await newImage.save();
+          return newImage;
         })
       );
 
@@ -66,4 +79,32 @@ const uploadImageHandler = async (req, res) => {
   }
 };
 
-module.exports = { uploadImageHandler };
+const fetchAllImages = async (req, res) => {
+  try {
+    const images = await Image.find({});
+
+    if (!images) {
+      return res.status(400).json({
+        success: false,
+        error: 'No imges found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Images fetched successfully',
+      data: images
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({
+      success: false,
+      error: `Internal server error: ${error.message}`
+    });
+  }
+};
+
+module.exports = {
+  uploadImageHandler,
+  fetchAllImages
+};
