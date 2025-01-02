@@ -14,8 +14,7 @@ const imageSchema = new Schema(
     },
 
     uploadedBy: {
-      // type: mongoose.Schema.Types.ObjectId,
-      type: Number,
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
     }

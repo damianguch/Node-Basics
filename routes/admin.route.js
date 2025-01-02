@@ -4,7 +4,7 @@ const { isAuthenticated } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.get('/welcome', isAuthenticated, isAdminUser, (req, res) => {
-  const { role } = req.userInfo;
+  const { role, userId, username } = req.userInfo;
   res.json({
     message: `Welcome to the ${role} page`,
     user: {

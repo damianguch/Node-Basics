@@ -1,18 +1,50 @@
-const User = ['username', 'password'];
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/user.model');
+
+const registerUser = async (req, res) => {
+  try {
+    const { email, username, password } = req.body;
+
+    // Check if the user already exists
+    if (await User.findOne({ $or: [{ email }, { username }] })) {
+      return res
+        .status(400)
+        .json({ error: 'Email or Username is already taken' });
+    }
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create a new user
+    const user = new User({
+      email,
+      username,
+      password: hashedPassword
+    });
+
+    // Save the user to the database
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: `Internal Server Error: ${error.message}`
+    });
+  }
+};
 
 const loginUser = async (req, res) => {
-  // Get the user credentials from the request body
+  // Get the user credentials f
   const { username, password } = req.body;
 
-  // let user = await User.findOne({ username });
-  let user = {
-    _id: 222888000,
-    username: 'johndoe',
-    password: '1234',
-    role: 'admin'
-  };
+  let user = await User.findOne({ username });
 
   if (!user) {
     return res.status(400).json({
@@ -21,8 +53,8 @@ const loginUser = async (req, res) => {
     });
   }
 
-  //const isPasswordValid = await bcrypt.compare(password, user.password);
-  const isPasswordValid = true;
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
   if (!isPasswordValid) {
     return res.status(400).json({
       success: false,
@@ -50,4 +82,4 @@ const loginUser = async (req, res) => {
   });
 };
 
-module.exports = { loginUser };
+module.exports = { loginUser, registerUser };
