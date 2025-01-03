@@ -41,45 +41,102 @@ const registerUser = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-  // Get the user credentials f
-  const { username, password } = req.body;
+  try {
+    // Get the user credentials f
+    const { username, password } = req.body;
 
-  let user = await User.findOne({ username });
+    let user = await User.findOne({ username });
 
-  if (!user) {
-    return res.status(400).json({
-      success: false,
-      error: 'User not found'
-    });
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-
-  if (!isPasswordValid) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid credentials'
-    });
-  }
-
-  // Create bearer token
-  accessToken = jwt.sign(
-    {
-      userId: user._id,
-      username: user.username,
-      role: user.role
-    },
-    process.env.JWT_SECRET_KEY,
-    {
-      expiresIn: '1hr'
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'User not found'
+      });
     }
-  );
 
-  res.status(200).json({
-    success: true,
-    message: 'User Login successfull',
-    accessToken
-  });
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Create bearer token
+    accessToken = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username,
+        role: user.role
+      },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: '1h'
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'User Login successfull',
+      accessToken
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: `Internal Server Error: ${error.message}`
+    });
+  }
 };
 
-module.exports = { loginUser, registerUser };
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { oldPassword, newPassword } = req.body;
+
+    // Get current logged in user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Check if the old password is correct
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update the password
+    await User.findByIdAndUpdate(userId, { password: hashedPassword });
+
+    // user.password = hashedPassword;
+    // user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: `Internal Server Error: ${error.message}`
+    });
+  }
+};
+
+module.exports = {
+  loginUser,
+  registerUser,
+  changePassword
+};

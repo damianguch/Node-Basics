@@ -14,7 +14,7 @@ const isAuthenticated = (req, res, next) => {
   // Decode the token
   try {
     const decodedTokenInfo = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    req.userInfo = decodedTokenInfo;
+    req.user = decodedTokenInfo;
 
     next();
   } catch (error) {

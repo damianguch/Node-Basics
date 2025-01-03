@@ -1,7 +1,8 @@
 const express = require('express');
 const {
   uploadImageHandler,
-  fetchAllImages
+  fetchAllImages,
+  deleteImage
 } = require('../controllers/image.controller');
 const { isAdminUser } = require('../middleware/admin.middleware');
 const { isAuthenticated } = require('../middleware/auth.middleware');
@@ -46,5 +47,6 @@ router.post(
 );
 
 router.get('/', isAuthenticated, fetchAllImages);
+router.delete('/:id', isAuthenticated, isAdminUser, deleteImage);
 
 module.exports = router;
