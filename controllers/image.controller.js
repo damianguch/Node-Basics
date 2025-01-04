@@ -2,7 +2,6 @@ const { uploadImage } = require('../helper/cloudinary');
 Image = require('../models/image.model');
 const fs = require('fs');
 const cloudinary = require('../config/cloudinary');
-const { cursorTo } = require('readline');
 
 const uploadImageHandler = async (req, res) => {
   try {
@@ -35,7 +34,6 @@ const uploadImageHandler = async (req, res) => {
     }
 
     /*** HANDLE THE CASE FOR MULTIPLE FILE UPLOAD ***/
-
     // req.files is populated by upload.array middleware
     // If used, even for a single file, the uploaded file will be available
     // in req.files, not req.file. So update the handler to consistently use
