@@ -1,4 +1,7 @@
 const Product = require('../models/product.model');
+const { validationResult, matchedData } = require('express-validator');
+
+let Products = [];
 
 const getProductStats = async (req, res) => {
   try {
@@ -120,6 +123,63 @@ const getProductAnalysis = async (req, res) => {
   }
 };
 
+// @Desc Get products by category and price
+// @Route GET /api/products
+// @Access Public
+const getProducts = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    console.log(errors);
+
+    const {
+      query: { category, price, name }
+    } = req;
+
+    // Build the query object dynamically
+    let query = {};
+    if (category) query.category = category;
+    if (price) query.price = { $gt: parseInt(price) };
+    if (name) query.name = { $regex: name, $options: 'i' };
+
+    const products = await Product.find(query).select(
+      'name category price inStock image'
+    );
+
+    if (products) {
+      res.status(200).json(products);
+    }
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: ree.message
+    });
+  }
+};
+
+// @Desc Create a new product
+// @Route POST /api/products
+// @Access Public
+const createProduct = async (req, res) => {
+  const errors = validationResult(req);
+
+  // Check for errors
+  if (!errors.isEmpty()) {
+    return res
+      .status(400)
+      .json({ errors: errors.array().map((error) => error.msg) });
+  }
+
+  const data = matchedData(req);
+
+  const newProduct = {
+    id: Products.length > 0 ? Products[Products.length - 1].id + 1 : 1,
+    ...data
+  };
+
+  Products.push(newProduct);
+  res.status(201).json(newProduct);
+};
+
 const insertProduct = async (req, res) => {
   try {
     const sampleProducts = [
@@ -222,5 +282,7 @@ const insertProduct = async (req, res) => {
 module.exports = {
   insertProduct,
   getProductStats,
-  getProductAnalysis
+  getProductAnalysis,
+  getProducts,
+  createProduct
 };

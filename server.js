@@ -30,7 +30,15 @@ app.use('/api/products', productRoute);
 app.use('/api/books', bookRoute);
 app.use('/api/authors', authorRoute);
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  connectDB();
-});
+const start = async () => {
+  try {
+    await connectDB(process.env.MONGO_URI);
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}...`);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+start();

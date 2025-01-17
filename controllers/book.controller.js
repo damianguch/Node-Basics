@@ -1,7 +1,9 @@
 const Book = require('../models/book.model');
 const Author = require('../models/author.model');
 
-// Create and Save a new Book
+// #Desc Create a new book
+// #Route POST /api/books
+// #Access Public
 const createBook = async (req, res) => {
   try {
     const { title, year, pages, bio, authorName, authorEmail } = req.body;
@@ -50,9 +52,19 @@ const createBook = async (req, res) => {
   }
 };
 
+// @Desc Get a single book
+// @Route GET /api/books/:id
+// @Access Public
 const getBook = async (req, res, next) => {
   try {
-    const book = await Book.findById(req.params.id)
+    const parsedId = parseInt(req.params.id);
+
+    if (isNaN(parsedId))
+      return res
+        .status(400)
+        .json({ sucess: false, error: 'Bad request. Inavlid Id' });
+
+    const book = await Book.findById(parsedId)
       .populate({ path: 'author', select: 'name email bio -_id' })
       .exec();
 
