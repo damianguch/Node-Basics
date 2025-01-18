@@ -129,7 +129,6 @@ const getProductAnalysis = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const errors = validationResult(req);
-    console.log(errors);
 
     const {
       query: { category, price, name }
@@ -145,9 +144,29 @@ const getProducts = async (req, res) => {
       'name category price inStock image'
     );
 
-    if (products) {
-      res.status(200).json(products);
+    // console.log(req.cookies);
+    // console.log(req.signedCookies);
+    // console.log(req.headers.cookie);
+
+    console.log(req.session);
+    console.log(req.sessionID);
+
+    req.sessionStore.get(req.sessionID, (err, sessionData) => {
+      if (err) {
+        console.log(err);
+        throw err;
+      }
+
+      console.log(sessionData);
+    });
+
+    if (!req.signedCookies.token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized. Access denied!'
+      });
     }
+    res.status(200).json(products);
   } catch (err) {
     res.status(500).json({
       success: false,

@@ -2,9 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-// #desc Register a new user
-// #route POST /api/auth/register
-// #access Public
+// @Desc Register a new user
+// @Route POST /api/auth/register
+// @Access Public
 const registerUser = async (req, res) => {
   try {
     const { email, username, password } = req.body;
@@ -82,11 +82,21 @@ const loginUser = async (req, res) => {
       }
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'User Login successfull',
-      accessToken
-    });
+    // Modify the session data object
+    req.session.auth = true;
+    req.session.user = user;
+
+    res
+      .cookie('token', accessToken, {
+        maxAge: 3600000, // 1 hour
+        signed: true
+      })
+      .status(200)
+      .json({
+        success: true,
+        message: 'User Login successfull',
+        accessToken
+      });
   } catch (error) {
     res.status(500).json({
       success: false,
