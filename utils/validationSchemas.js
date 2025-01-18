@@ -33,6 +33,42 @@ const createProductSchema = {
   }
 };
 
+const createUserSchema = {
+  username: {
+    in: ['body'],
+    isLength: {
+      errorMessage: 'Username must be atleast 3 - 20 xters',
+      options: { min: 3, max: 20 }
+    },
+    notEmpty: {
+      errorMessage: 'Username cannot be empty'
+    },
+    isString: {
+      errorMessage: 'Username must be a string'
+    }
+  },
+  email: {
+    in: ['body'],
+    isEmail: {
+      errorMessage: 'Email must be a valid email address'
+    }
+  },
+  password: {
+    in: ['body'],
+    isLength: {
+      errorMessage: 'Password must be atleast 6 - 20 xters',
+      options: { min: 6, max: 20 }
+    },
+    notEmpty: {
+      errorMessage: 'Password cannot be empty'
+    },
+    isString: {
+      errorMessage: 'Password must be a string'
+    }
+  }
+};
+
 module.exports = {
-  createProductSchema
+  createProductSchema,
+  createUserSchema
 };
