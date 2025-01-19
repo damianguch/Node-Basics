@@ -1,6 +1,6 @@
-const dotenv = require('dotenv');
-require('./strategies/local-strategy');
-dotenv.config();
+require('dotenv').config();
+// require('./strategies/local-strategy');
+require('./strategies/discord-strategy');
 const passportRoute = require('./passport/passport.route');
 const cartRoute = require('./routes/cart.route');
 const passport = require('passport');
@@ -14,8 +14,10 @@ const authorRoute = require('./routes/author.route');
 const connectDB = require('./database/db');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const express = require('express');
 const path = require('path');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = 3000;
@@ -23,28 +25,9 @@ const PORT = 3000;
 app.set('view engine', 'ejs');
 // Set the directory where the views are stored
 app.set('views', path.join(__dirname, 'views'));
-
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_SECRET));
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false,
-      maxAge: 1000 * 60 * 60 * 24 // 24 hours
-    }
-  })
-);
-
-app.use(passport.initialize());
-
-// Using passport to manage sessions
-// Attaches a dynamic user property to the request object
-// req.user is the user object that passport deserializes
-app.use(passport.session());
 
 // Bind application-level middleware to an instance of
 // the app object by using the app.use().
@@ -56,7 +39,6 @@ app.use('/api/products', productRoute);
 app.use('/api/books', bookRoute);
 app.use('/api/authors', authorRoute);
 app.use('/api/cart', cartRoute);
-app.use(passportRoute);
 
 app.get('/', (req, res) => {
   // Modify the session data object so that if cookie is not
@@ -88,11 +70,44 @@ app.get('/api/auth/status', (req, res) => {
 const start = async () => {
   try {
     await connectDB(process.env.MONGO_URI);
+
+    // Reuse the existing connection
+    const mongoClient = mongoose.connection.getClient();
+    if (!mongoClient) {
+      throw new Error(
+        'Cannot initialize session store. MongoDB client is not available.'
+      );
+    }
+
+    app.use(
+      session({
+        store: MongoStore.create({
+          client: mongoClient
+        }),
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false,
+          maxAge: 1000 * 60 * 60 * 24 // 24 hours
+        }
+      })
+    );
+
+    app.use(passport.initialize());
+
+    // Attaches a dynamic user property to the request object
+    // req.user is the user object that passport deserializes
+    app.use(passport.session());
+
+    // Define Passport-related routes after session middleware setup
+    app.use(passportRoute);
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}...`);
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log(err.message);
   }
 };
 

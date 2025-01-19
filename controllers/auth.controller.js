@@ -1,39 +1,58 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
+const { validationResult, matchedData } = require('express-validator');
+const { hashPassword, comparePassword } = require('../utils/authHasher');
 
 // @Desc Register a new user
 // @Route POST /api/auth/register
 // @Access Public
 const registerUser = async (req, res) => {
-  try {
-    const { email, username, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: errors.array().map((error) => error.msg)
+    });
+  }
 
+  const data = matchedData(req);
+
+  try {
     // Check if the user already exists
-    if (await User.findOne({ $or: [{ email }, { username }] })) {
-      return res
-        .status(400)
-        .json({ error: 'Email or Username is already taken' });
+    const existingUser = await User.findOne({
+      $or: [data.email, data.username]
+    });
+    if (existingUser) {
+      const takenField =
+        existingUser.email === data.email ? 'Email' : 'Username';
+      return res.status(400).json({
+        success: false,
+        error: `${takenField} is already taken`
+      });
     }
 
     // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    data.password = await hashPassword(data.password);
 
     // Create a new user
-    const user = new User({
-      email,
-      username,
-      password: hashedPassword
-    });
+    const user = new User(data);
 
     // Save the user to the database
-    await user.save();
+    const savedUser = await user.save();
+
+    // Remove unwanted fields
+    const {
+      password: _,
+      __v: __,
+      updatedAt: ___,
+      ...newUser
+    } = savedUser.toObject();
 
     res.status(201).json({
       success: true,
       message: 'User created successfully',
-      user
+      newUser
     });
   } catch (error) {
     res.status(500).json({
@@ -60,7 +79,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await comparePassword(password, user.password);
 
     if (!isPasswordValid) {
       return res.status(400).json({
